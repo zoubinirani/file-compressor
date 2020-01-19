@@ -2,6 +2,7 @@
 
 import PySimpleGUI as sg
 import gzip
+import os
 import shutil
 
 def extractFolderPath(path):
@@ -18,10 +19,28 @@ def compressFileWindow(path):
     window = sg.Window('Compressing File', layout)
     while True:
         event, values = window(timeout=0)
-        compressFile(path)
+        compress_path = compressFile(path)
         break
     window.close()
+    resultsWindow(path, compress_path)
 
+def resultsWindow(original_path, compress_path):
+    new_size = round(os.stat(original_path).st_size / 1000000, 2)
+    savings = 1 - os.stat(compress_path).st_size / os.stat(original_path).st_size
+    layout = [[sg.Text('Success!')],
+             [sg.Text('Your compressed file is ' + str(new_size) + "MB and is " + 
+              str("{:.1%}".format(savings)) + " smaller than the original.")],
+             [sg.Submit(button_text = "Compress Another File", key="Submit"),
+              sg.Cancel(button_text = "Close", key="Close")]]
+    window = sg.Window('Summary', layout)
+    while True:
+        event, values = window.read()
+        if event in ('Close', None):
+            break
+        window.close()
+        selectFileWindow()
+    window.close()
+    
 def selectFileWindow():
     layout = [[sg.Text('Select your file to compress.')],
          [sg.Input(key="Input"), sg.FileBrowse(key="Browse")],
@@ -42,6 +61,8 @@ def compressFile(path):
         compress_path = folder_path + file_name + '.gz'
         with gzip.open(compress_path, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
+        return compress_path
+    
 def main():
     sg.theme('Default1')
     selectFileWindow()
